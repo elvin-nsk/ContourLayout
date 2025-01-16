@@ -1,9 +1,9 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} ContourView 
-   ClientHeight    =   5295
+   ClientHeight    =   1545
    ClientLeft      =   45
    ClientTop       =   390
-   ClientWidth     =   8625.001
+   ClientWidth     =   2910
    OleObjectBlob   =   "ContourView.frx":0000
    StartUpPosition =   1  'CenterOwner
 End
@@ -29,17 +29,19 @@ Public OffsetHandler As TextBoxHandler
 ' # Constructor
 
 Private Sub UserForm_Initialize()
-    Caption = "Построение контура - " & APP_DISPLAYNAME & " (v" & APP_VERSION & ")"
+    Caption = "Построение контура"
     btnOk.Default = True
     
     Set OffsetHandler = _
         TextBoxHandler.New_(Offset, TextBoxTypeDouble)
+    OffsetHandler = 0
 End Sub
 
 '===============================================================================
 ' # Handlers
 
 Private Sub Offset_AfterUpdate()
+    If Offset.Value = 0 Then Exit Sub
     If Offset.Value < MIN_OFFSET And Offset.Value > -MIN_OFFSET Then
         If Offset.Value < 0 Then
             Offset.Value = VBA.CStr(-MIN_OFFSET)

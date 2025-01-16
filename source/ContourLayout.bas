@@ -21,6 +21,8 @@ Public Const APP_VERSION As String = "2025.01.15"
 ' # Globals
 
 Public Const CONTOUR_COLOR As String = "CMYK,USER,0,0,0,100"
+Public Const CONTOUR_FILLET_MULT As Double = 1
+Public Const CONTOUR_ZERO_FILLET_MULT As Double = 0.005
 Private Const SOME_CONST As String = ""
 
 '===============================================================================
@@ -28,19 +30,33 @@ Private Const SOME_CONST As String = ""
 
 Sub Contour()
 
+    Const ENTRY_NAME = "Построение контура"
+
     #If DebugMode = 0 Then
     On Error GoTo Catch
     #End If
         
-    If InputData.ExpectPage.Fail Then GoTo Finally
+    Dim Shape As Shape
+    With InputData.ExpectPage
+        If .Fail Then Exit Sub
+        If .Shapes.Count > 1 Then
+            Warn "Нужен один растровый объект на странице.", ENTRY_NAME
+            Exit Sub
+        End If
+        Set Shape = .Shape
+    End With
+    
+    If Not ValidForTrace(Shape) Then
+        Warn "Объект должен быть растровым изображением.", ENTRY_NAME
+        Exit Sub
+    End If
     
     Dim Cfg As Dictionary
-    If ShowContourView(Cfg) = Fail Then GoTo Finally
+    If ShowContourView(Cfg) = Fail Then Exit Sub
     
-    BoostStart "Построение контура"
+    BoostStart ENTRY_NAME
     
-    
-    '??? PROFIT!
+    ContourMain Shape, Cfg
     
 Finally:
     BoostFinish
@@ -54,13 +70,15 @@ End Sub
 
 Sub Layout()
 
+    Const ENTRY_NAME = "Расклад на лист"
+
     #If DebugMode = 0 Then
     On Error GoTo Catch
     #End If
         
     If InputData.ExpectPage.Fail Then GoTo Finally
     
-    BoostStart "Layout"
+    BoostStart ENTRY_NAME
     
     '??? PROFIT!
     
@@ -80,26 +98,7 @@ End Sub
 
 
 
-'-------------------------------------------------------------------------------
 
-Private Function ShowContourView(ByRef Cfg As Dictionary) As BooleanResult
-    Dim FileBinder As JsonFileBinder: Set FileBinder = BindConfig
-    Set Cfg = FileBinder.GetOrMakeSubDictionary("Contour")
-    Dim View As New ContourView
-    Dim ViewBinder As ViewToDictionaryBinder: Set ViewBinder = _
-        ViewToDictionaryBinder.New_( _
-            Dictionary:=Cfg, _
-            View:=View, _
-            ControlNames:=Pack("Offset") _
-        )
-    View.Show vbModal
-    ViewBinder.RefreshDictionary
-    ShowContourView = View.IsOk
-End Function
-
-Private Function BindConfig() As JsonFileBinder
-    Set BindConfig = JsonFileBinder.New_(APP_FILEBASENAME)
-End Function
 
 '===============================================================================
 ' # Tests
