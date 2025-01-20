@@ -1,7 +1,7 @@
 Attribute VB_Name = "ContourLayout"
 '===============================================================================
 '   Макрос          : ContourLayout
-'   Версия          : 2025.01.15
+'   Версия          : 2025.01.20
 '   Сайты           : https://vk.com/elvin_macro
 '                     https://github.com/elvin-nsk
 '   Автор           : elvin-nsk (me@elvin.nsk.ru)
@@ -15,15 +15,19 @@ Option Explicit
 Public Const APP_NAME As String = "ContourLayout"
 Public Const APP_DISPLAYNAME As String = APP_NAME
 Public Const APP_FILEBASENAME As String = "elvin_" & APP_NAME
-Public Const APP_VERSION As String = "2025.01.15"
+Public Const APP_VERSION As String = "2025.01.20"
 
 '===============================================================================
 ' # Globals
 
+Public Const CONTOUR_THICKNESS As Double = 0.076 '0.076 = hairline
 Public Const CONTOUR_COLOR As String = "CMYK,USER,0,0,0,100"
 Public Const CONTOUR_FILLET_MULT As Double = 1
 Public Const CONTOUR_ZERO_FILLET_MULT As Double = 0.005
-Private Const SOME_CONST As String = ""
+Public Const PAGE_PADDING_TOP As Double = 15
+Public Const PAGE_PADDING_LEFT As Double = 10
+Public Const PAGE_PADDING_RIGHT As Double = PAGE_PADDING_LEFT
+Public Const PAGE_PADDING_BOTTOM As Double = 55
 
 '===============================================================================
 ' # Entry points
@@ -52,7 +56,11 @@ Sub Contour()
     End If
     
     Dim Cfg As Dictionary
-    If ShowContourView(Cfg) = Fail Then Exit Sub
+    If ShiftKeyPressed Then
+        ReadContourCfg Cfg
+    Else
+        If ShowContourView(Cfg) = Fail Then Exit Sub
+    End If
     
     BoostStart ENTRY_NAME
     
@@ -76,11 +84,30 @@ Sub Layout()
     On Error GoTo Catch
     #End If
         
-    If InputData.ExpectPage.Fail Then GoTo Finally
+    Dim Shapes As ShapeRange
+    With InputData.ExpectPage
+        If .Fail Then Exit Sub
+        'If .Shapes.Count > 2 Then
+        '    Warn "На странице не должно быть больше двух объектов.", ENTRY_NAME
+        '    Exit Sub
+        'End If
+        Set Shapes = .Shapes
+    End With
+        
+    ActiveDocument.Unit = cdrMillimeter
+    Dim PageSize As Size: Set PageSize = Size.NewFromRect(ActivePage.BoundingBox)
+    Dim PlaceSize As Size: Set PlaceSize = Size.NewFromRect(Shapes.BoundingBox)
+        
+    Dim Cfg As Dictionary
+    Dim Calculated As FitCalc, Space As Double
+    If ShowLayoutView(PageSize, PlaceSize, Cfg, Calculated, Space) _
+        = Fail Then Exit Sub
+    
+    If Calculated.Total = 0 Then Exit Sub
     
     BoostStart ENTRY_NAME
     
-    '??? PROFIT!
+    LayoutMain Shapes, Cfg, Calculated, Space
     
 Finally:
     BoostFinish
@@ -92,17 +119,8 @@ Catch:
 
 End Sub
 
-
-'===============================================================================
-' # Helpers
-
-
-
-
-
 '===============================================================================
 ' # Tests
 
 Private Sub TestSomething()
-'
 End Sub

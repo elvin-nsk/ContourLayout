@@ -24,7 +24,7 @@ Public Sub ContourMain(ByVal BitmapShape As Shape, ByVal Cfg As Dictionary)
     
     Dim Contour As Shape
     Set Contour = MakeContour(Traced, Offset)
-    Contour.Outline.Color = CreateColor(CONTOUR_COLOR)
+    Contour.Outline.SetProperties CONTOUR_THICKNESS, , CreateColor(CONTOUR_COLOR)
     Contour.Fill.ApplyNoFill
 
     Smoothen Contour.Curve, FilletAmount
@@ -66,16 +66,17 @@ Public Function MakeContour(ByVal Shape As Shape, ByVal Offset As Double) As Sha
         Shape.Delete
         Exit Function
     End If
-    
-    With Shape.Curve
-        .CopyAssign .Contour( _
+        
+    Set MakeContour = _
+        Shape.CreateContour( _
             Direction:=Direction, _
             Offset:=Abs(Offset), _
+            Steps:=1, _
             EndCapType:=cdrContourRoundCap, _
             CornerType:=cdrContourCornerRound _
-        )
-    End With
-    Set MakeContour = Shape
+        ).Separate.FirstShape
+    
+    Shape.Delete
 End Function
 
 Public Property Get ValidForTrace(ByVal RawShape As Shape) As Boolean
@@ -114,6 +115,118 @@ Private Sub Smoothen( _
 End Sub
 
 '===============================================================================
+' # Layout helpers
+
+Public Sub LayoutMain( _
+               ByVal Shapes As ShapeRange, _
+               ByVal Cfg As Dictionary, _
+               ByVal Calculated As FitCalc, _
+               ByVal Space As Double _
+           )
+    If Calculated.Rotate Then Shapes.Rotate 90
+    Dim Sorted As SortedMotifs: Set Sorted = _
+        DuplicateMotifs(Shapes, Calculated.Total)
+    
+    Dim MarksOffset As Double
+    If Cfg!OptionMarks Then MarksOffset = Cfg!MarksInnerOffset
+    
+    With Composer.NewCompose( _
+        Elements:=Sorted.Elements, _
+        StartingPoint:= _
+            Point.New_( _
+                PAGE_PADDING_LEFT + MarksOffset, _
+                ActivePage.TopY - PAGE_PADDING_TOP - MarksOffset _
+            ), _
+        MaxPlacesInWidth:=Calculated.NumWidth, _
+        MaxPlacesInHeight:=Calculated.NumHeight, _
+        HorizontalSpace:=Space, _
+        VerticalSpace:=Space _
+    )
+    End With
+    
+    If Not Cfg!OptionMarks Then Exit Sub
+    
+    Dim Composed As ShapeRange: Set Composed = ActivePage.Shapes.All
+    Dim Mark As Shape: Set Mark = Import(Cfg!MarksPath)
+    Dim Marks As ShapeRange: Set Marks = SetMarks(Mark, Composed, MarksOffset)
+    Mark.Delete
+    
+    Dim NewPage As Page
+    With Sorted
+        If .Contours.Count > 0 And .Images.Count > 0 Then
+            Set NewPage = ActiveDocument.AddPages(1)
+            .Contours.MoveToLayer NewPage.ActiveLayer
+            Marks.CopyToLayer NewPage.ActiveLayer
+        End If
+    End With
+    
+End Sub
+
+Private Function SetMarks( _
+                     ByVal Mark As Shape, _
+                     ByVal Area As ShapeRange, _
+                     ByVal MarksInnerOffset As Double _
+                 ) As ShapeRange
+    Set SetMarks = CreateShapeRange
+    SetMarks.Add MarkDuplicate(Mark, Area.LeftX - MarksInnerOffset, Area.TopY + MarksInnerOffset, 0)
+    SetMarks.Add MarkDuplicate(Mark, Area.RightX + MarksInnerOffset, Area.TopY + MarksInnerOffset, -90)
+    SetMarks.Add MarkDuplicate(Mark, Area.RightX + MarksInnerOffset, Area.BottomY - MarksInnerOffset, -180)
+    SetMarks.Add MarkDuplicate(Mark, Area.LeftX - MarksInnerOffset, Area.BottomY - MarksInnerOffset, -270)
+End Function
+
+Private Function MarkDuplicate( _
+                ByVal Mark As Shape, _
+                ByVal x As Double, y As Double, _
+                ByVal RotateByAngle As Double _
+            ) As Shape
+    Set MarkDuplicate = Mark.Duplicate
+    SetPositionByRotationCenter MarkDuplicate, x, y
+    MarkDuplicate.Rotate RotateByAngle
+End Function
+
+Public Property Get DuplicateMotifs( _
+                        ByVal Motif As ShapeRange, _
+                        ByVal Count As Long _
+                    ) As SortedMotifs
+    Set DuplicateMotifs = New SortedMotifs
+    Dim Image As Shape, Contour As Shape
+    GetSortedMotif Motif, Image, Contour
+    Dim TempMotif As ShapeRange
+    Dim TempShape As Shape
+    Dim i As Long
+    For i = 1 To Count
+        Set TempMotif = CreateShapeRange
+        If IsSome(Image) Then
+            Set TempShape = Image.Duplicate
+            TempMotif.Add TempShape
+            DuplicateMotifs.Images.Add TempShape
+        End If
+        If IsSome(Contour) Then
+            Set TempShape = Contour.Duplicate
+            TempMotif.Add TempShape
+            DuplicateMotifs.Contours.Add TempShape
+        End If
+        DuplicateMotifs.Elements.Add ComposerElement.New_(TempMotif)
+    Next i
+    Motif.Delete
+End Property
+
+Private Sub GetSortedMotif( _
+                ByVal Motif As ShapeRange, _
+                ByRef Image As Shape, _
+                ByRef Contour As Shape _
+            )
+    Dim Shapes As New ShapeRange: Shapes.AddRange Motif
+    Set Image = Motif.Shapes.FindShape(Type:=cdrBitmapShape)
+    If IsSome(Image) Then Shapes.RemoveRange PackShapes(Image)
+    If Shapes.Count = 1 Then
+        Set Contour = Shapes.FirstShape
+    ElseIf Shapes.Count > 1 Then
+        Set Contour = Shapes.Group
+    End If
+End Sub
+
+'===============================================================================
 ' # View and config
 
 Public Function ShowContourView(ByRef Cfg As Dictionary) As BooleanResult
@@ -129,6 +242,36 @@ Public Function ShowContourView(ByRef Cfg As Dictionary) As BooleanResult
     View.Show vbModal
     ViewBinder.RefreshDictionary
     ShowContourView = View.IsOk
+End Function
+
+Public Sub ReadContourCfg(ByRef Cfg As Dictionary)
+    Set Cfg = BindConfig.GetOrMakeSubDictionary("Contour")
+End Sub
+
+Public Function ShowLayoutView( _
+                    ByVal PageSize As Size, _
+                    ByVal PlaceSize As Size, _
+                    ByRef Cfg As Dictionary, _
+                    ByRef Calculated As FitCalc, _
+                    ByRef Space As Double _
+                ) As BooleanResult
+    Dim FileBinder As JsonFileBinder: Set FileBinder = BindConfig
+    Set Cfg = FileBinder.GetOrMakeSubDictionary("Layout")
+    Dim View As New LayoutView
+    Dim ViewBinder As ViewToDictionaryBinder: Set ViewBinder = _
+        ViewToDictionaryBinder.New_( _
+            Dictionary:=Cfg, _
+            View:=View, _
+            ControlNames:= _
+                Pack("OptionMarks", "MarksInnerOffset", "MarksPath") _
+        )
+    Set View.PlaceSize = PlaceSize
+    Set View.PageSize = PageSize
+    View.Show vbModal
+    ViewBinder.RefreshDictionary
+    Set Calculated = View.Calculated
+    Space = View.Space
+    ShowLayoutView = View.IsOk
 End Function
 
 Private Function BindConfig() As JsonFileBinder

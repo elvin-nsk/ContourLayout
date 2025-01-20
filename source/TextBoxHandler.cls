@@ -9,7 +9,7 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = True
 '===============================================================================
 '   Модуль          : TextBoxHandler
-'   Версия          : 2024.02.21
+'   Версия          : 2025.01.19
 '   Автор           : elvin-nsk (me@elvin.nsk.ru)
 '   Сайт            : https://github.com/elvin-nsk/LowCoupledFromCore
 '   Назначение      : сохранение значений TextBox на форме в заданном диапазоне
@@ -86,7 +86,7 @@ Attribute Value.VB_UserMemId = 0
     End Select
 End Property
 Public Property Let Value(ByVal RHS As Variant)
-    Bound.Value = VBA.CStr(RHS)
+    Bound.Value = CStr(RHS)
 End Property
 
 Public Property Get Self() As TextBoxHandler
@@ -166,8 +166,8 @@ Private Sub GuardRangeDbl( _
             )
     With Bound
         If .Value = "" Or .Value = "-" Then Exit Sub
-        If VBA.CDbl(.Value) > Max Then .Value = VBA.CStr(Max)
-        If VBA.CDbl(.Value) < Min Then .Value = VBA.CStr(Min)
+        If CDbl(.Value) > Max Then .Value = CStr(Max)
+        If CDbl(.Value) < Min Then .Value = CStr(Min)
     End With
 End Sub
 
@@ -177,8 +177,8 @@ Private Sub GuardRangeLng( _
             )
     With Bound
         If .Value = "" Or .Value = "-" Then Exit Sub
-        If VBA.CLng(.Value) > Max Then .Value = VBA.CStr(Max)
-        If VBA.CLng(.Value) < Min Then .Value = VBA.CStr(Min)
+        If CLng(.Value) > Max Then .Value = CStr(Max)
+        If CLng(.Value) < Min Then .Value = CStr(Min)
     End With
 End Sub
 

@@ -1,7 +1,7 @@
 Attribute VB_Name = "LibCore"
 '===============================================================================
 '   Модуль          : LibCore
-'   Версия          : 2025.01.15
+'   Версия          : 2025.01.19
 '   Автор           : elvin-nsk (me@elvin.nsk.ru)
 '   Использован код : dizzy (из макроса CtC), Alex Vakulenko
 '                     и др.
@@ -12,6 +12,21 @@ Attribute VB_Name = "LibCore"
 
 Option Explicit
 Option Base 1
+
+'===============================================================================
+' # внешние функции
+
+#If VBA7 Then
+
+Private Declare PtrSafe Function GetKeyState _
+    Lib "user32" (ByVal vKey As Long) As Integer
+
+#Else
+
+Private Declare Function GetKeyState _
+    Lib "user32" (ByVal vKey As Long) As Integer
+
+#End If
 
 '===============================================================================
 ' # приватные переменные модуля
@@ -1374,6 +1389,15 @@ Public Function Group( _
     If Not Name = vbNullString Then Group.Name = Name
 End Function
 
+Public Function Import( _
+                    ByVal File As String, _
+                    Optional ByVal Filter As cdrFilter, _
+                    Optional ByVal Options As StructImportOptions _
+                ) As Shape
+    ActiveLayer.Import File, Filter, Options
+    Set Import = ActiveShape
+End Function
+
 'правильный интерсект
 Public Function Intersect( _
                     ByVal SourceShape As Shape, _
@@ -1685,6 +1709,17 @@ Public Sub SetOutlineColor( _
     For Each Shape In Shapes
         Shape.Outline.Color.CopyAssign Color
     Next Shape
+End Sub
+
+'переместить шейп за точку вращения
+Public Sub SetPositionByRotationCenter( _
+               ByVal Shape As Shape, _
+               ByVal x As Double, _
+               ByVal y As Double _
+           )
+    Dim OffsetX As Double: OffsetX = Shape.RotationCenterX - Shape.LeftX
+    Dim OffsetY As Double: OffsetY = Shape.RotationCenterY - Shape.BottomY
+    Shape.SetPositionEx cdrBottomLeft, x - OffsetX, y - OffsetY
 End Sub
 
 Public Sub Simplify(ByRef Shapes As ShapeRange)
@@ -2443,6 +2478,10 @@ Public Property Get SequenceToShowable(ByVal Sequence As Variant) As String
     Next Item
     If VBA.Len(Result) > 2 Then Result = VBA.Left(Result, VBA.Len(Result) - 2)
     SequenceToShowable = "[" & Result & "]"
+End Property
+
+Public Property Get ShiftKeyPressed() As Boolean
+  ShiftKeyPressed = GetKeyState(vbKeyShift) < 0
 End Property
 
 'bubble sort
