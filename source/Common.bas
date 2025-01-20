@@ -24,6 +24,8 @@ Public Sub ContourMain(ByVal BitmapShape As Shape, ByVal Cfg As Dictionary)
     
     Dim Contour As Shape
     Set Contour = MakeContour(Traced, Offset)
+    If Contour.Type = cdrGroupShape Then _
+            Set Contour = Contour.UngroupAllEx.Combine
     Contour.Outline.SetProperties CONTOUR_THICKNESS, , CreateColor(CONTOUR_COLOR)
     Contour.Fill.ApplyNoFill
 
