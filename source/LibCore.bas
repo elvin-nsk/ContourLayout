@@ -1,7 +1,7 @@
 Attribute VB_Name = "LibCore"
 '===============================================================================
 '   Модуль          : LibCore
-'   Версия          : 2025.01.19
+'   Версия          : 2025.01.23
 '   Автор           : elvin-nsk (me@elvin.nsk.ru)
 '   Использован код : dizzy (из макроса CtC), Alex Vakulenko
 '                     и др.
@@ -1216,23 +1216,33 @@ End Function
 
 'инструмент Boundary
 Public Function CreateBoundary(ByVal ShapeOrRange As Object) As Shape
-    On Error GoTo Catch
-    Dim tShape As Shape, tRange As ShapeRange
+    Dim Shape As Shape, Shapes As ShapeRange
+    'если в рендже единственный шейп и он группа, то готовим хак (см. далее)
+    If TypeOf ShapeOrRange Is ShapeRange Then
+        If ShapeOrRange.Count = 1 _
+       And ShapeOrRange.FirstShape.Type = cdrGroupShape Then
+            Set ShapeOrRange = ShapeOrRange.FirstShape
+        End If
+    End If
     'просто объект не ест, надо конкретный тип
     If TypeOf ShapeOrRange Is Shape Then
-        Set tShape = ShapeOrRange
-        Set CreateBoundary = tShape.CustomCommand("Boundary", "CreateBoundary")
+        Set Shape = ShapeOrRange
+        Set CreateBoundary = Shape.CustomCommand("Boundary", "CreateBoundary")
+        'хак для новых корелов (начиная с 22-го)
+        'глюк: если Boundary делается группе, то результат включается в группу
+        'соответственно, исключаем результат из группы
+        If Shape.Type = cdrGroupShape Then
+            CreateBoundary.OrderFrontOf Shape
+        End If
     ElseIf TypeOf ShapeOrRange Is ShapeRange Then
-        Set tRange = ShapeOrRange
-        Set CreateBoundary = tRange.CustomCommand("Boundary", "CreateBoundary")
+        Set Shapes = ShapeOrRange
+        Set CreateBoundary = Shapes.CustomCommand("Boundary", "CreateBoundary")
     Else
         Err.Raise 13, Source:="CreateBoundary", _
             Description:="Type mismatch: ShapeOrRange должен быть Shape или ShapeRange"
         Exit Function
     End If
     Exit Function
-Catch:
-    Debug.Print Err.Number
 End Function
 
 'создаёт слой, если такой слой есть - возвращает этот слой
