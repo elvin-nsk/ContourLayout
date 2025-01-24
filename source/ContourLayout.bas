@@ -1,7 +1,7 @@
 Attribute VB_Name = "ContourLayout"
 '===============================================================================
 '   Макрос          : ContourLayout
-'   Версия          : 2025.01.23
+'   Версия          : 2025.01.24
 '   Сайты           : https://vk.com/elvin_macro
 '                     https://github.com/elvin-nsk
 '   Автор           : elvin-nsk (me@elvin.nsk.ru)
@@ -15,7 +15,7 @@ Option Explicit
 Public Const APP_NAME As String = "ContourLayout"
 Public Const APP_DISPLAYNAME As String = APP_NAME
 Public Const APP_FILEBASENAME As String = "elvin_" & APP_NAME
-Public Const APP_VERSION As String = "2025.01.23"
+Public Const APP_VERSION As String = "2025.01.24"
 
 '===============================================================================
 ' # Globals
@@ -87,10 +87,6 @@ Sub Layout()
     Dim Shapes As ShapeRange
     With InputData.ExpectPage
         If .Fail Then Exit Sub
-        'If .Shapes.Count > 2 Then
-        '    Warn "На странице не должно быть больше двух объектов.", ENTRY_NAME
-        '    Exit Sub
-        'End If
         Set Shapes = .Shapes
     End With
         
@@ -98,16 +94,15 @@ Sub Layout()
     Dim PageSize As Size: Set PageSize = Size.NewFromRect(ActivePage.BoundingBox)
     Dim PlaceSize As Size: Set PlaceSize = Size.NewFromRect(Shapes.BoundingBox)
         
-    Dim Cfg As Dictionary
-    Dim Calculated As FitCalc, Space As Double
-    If ShowLayoutView(PageSize, PlaceSize, Cfg, Calculated, Space) _
+    Dim Cfg As Dictionary, LayoutInfo As LayoutInfo
+    If ShowLayoutView(PageSize, PlaceSize, Cfg, LayoutInfo) _
         = Fail Then Exit Sub
     
-    If Calculated.Total = 0 Then Exit Sub
+    If LayoutInfo.NumWidth * LayoutInfo.NumHeight = 0 Then Exit Sub
     
     BoostStart ENTRY_NAME
     
-    LayoutMain Shapes, Cfg, Calculated, Space
+    LayoutMain Shapes, Cfg, LayoutInfo
     
 Finally:
     BoostFinish

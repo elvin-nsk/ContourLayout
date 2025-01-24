@@ -122,12 +122,11 @@ End Sub
 Public Sub LayoutMain( _
                ByVal Shapes As ShapeRange, _
                ByVal Cfg As Dictionary, _
-               ByVal Calculated As FitCalc, _
-               ByVal Space As Double _
+               LayoutInfo As LayoutInfo _
            )
-    If Calculated.Rotate Then Shapes.Rotate 90
+    If LayoutInfo.Rotate Then Shapes.Rotate 90
     Dim Sorted As SortedMotifs: Set Sorted = _
-        DuplicateMotifs(Shapes, Calculated.Total)
+        DuplicateMotifs(Shapes, LayoutInfo.NumWidth * LayoutInfo.NumHeight)
     
     Dim MarksOffset As Double
     If Cfg!OptionMarks Then MarksOffset = Cfg!MarksInnerOffset
@@ -139,10 +138,10 @@ Public Sub LayoutMain( _
                 PAGE_PADDING_LEFT + MarksOffset, _
                 ActivePage.TopY - PAGE_PADDING_TOP - MarksOffset _
             ), _
-        MaxPlacesInWidth:=Calculated.NumWidth, _
-        MaxPlacesInHeight:=Calculated.NumHeight, _
-        HorizontalSpace:=Space, _
-        VerticalSpace:=Space _
+        MaxPlacesInWidth:=LayoutInfo.NumWidth, _
+        MaxPlacesInHeight:=LayoutInfo.NumHeight, _
+        HorizontalSpace:=LayoutInfo.Space, _
+        VerticalSpace:=LayoutInfo.Space _
     )
     End With
     
@@ -159,6 +158,11 @@ Public Sub LayoutMain( _
             Set NewPage = ActiveDocument.AddPages(1)
             .Contours.MoveToLayer NewPage.ActiveLayer
             Marks.CopyToLayer NewPage.ActiveLayer
+            With NewPage.Shapes.All.CreateDocumentFrom.ActivePage
+                .SetSize .Shapes.All.SizeWidth, .Shapes.All.SizeHeight
+                .Shapes.All.SetPositionEx cdrBottomLeft, .LeftX, .BottomY
+                
+            End With
         End If
     End With
     
@@ -254,8 +258,7 @@ Public Function ShowLayoutView( _
                     ByVal PageSize As Size, _
                     ByVal PlaceSize As Size, _
                     ByRef Cfg As Dictionary, _
-                    ByRef Calculated As FitCalc, _
-                    ByRef Space As Double _
+                    ByRef LayoutInfo As LayoutInfo _
                 ) As BooleanResult
     Dim FileBinder As JsonFileBinder: Set FileBinder = BindConfig
     Set Cfg = FileBinder.GetOrMakeSubDictionary("Layout")
@@ -270,10 +273,15 @@ Public Function ShowLayoutView( _
     Set View.PlaceSize = PlaceSize
     Set View.PageSize = PageSize
     View.Show vbModal
-    ViewBinder.RefreshDictionary
-    Set Calculated = View.Calculated
-    Space = View.Space
     ShowLayoutView = View.IsOk
+    If Not View.IsOk Then Exit Function
+    
+    ViewBinder.RefreshDictionary
+    Set LayoutInfo = New LayoutInfo
+    LayoutInfo.NumWidth = View.NumWidth
+    LayoutInfo.NumHeight = View.NumHeight
+    LayoutInfo.Rotate = View.Rotate
+    LayoutInfo.Space = View.Space
 End Function
 
 Private Function BindConfig() As JsonFileBinder
