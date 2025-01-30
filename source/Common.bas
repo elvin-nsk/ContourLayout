@@ -152,6 +152,9 @@ Public Sub LayoutMain( _
     Dim Marks As ShapeRange: Set Marks = SetMarks(Mark, Composed, MarksOffset)
     Mark.Delete
     
+    With ActiveDocument
+        .MasterPage.SetSize ActivePage.SizeWidth, ActivePage.SizeHeight
+    End With
     Dim NewPage As Page
     With Sorted
         If .Contours.Count > 0 And .Images.Count > 0 Then

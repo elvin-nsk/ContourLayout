@@ -1,7 +1,7 @@
 Attribute VB_Name = "LibCore"
 '===============================================================================
 '   Модуль          : LibCore
-'   Версия          : 2025.01.23
+'   Версия          : 2025.01.30
 '   Автор           : elvin-nsk (me@elvin.nsk.ru)
 '   Использован код : dizzy (из макроса CtC), Alex Vakulenko
 '                     и др.
@@ -1831,7 +1831,7 @@ End Property
 Public Property Get FindFileInGMSFolders(ByVal FileName As String) As String
     FindFileInGMSFolders = GMSManager.UserGMSPath & FileName
     If Not FileExists(FindFileInGMSFolders) Then _
-        FindFileInGMSFolders = GMSManager.GMSPath & FileName
+        FindFileInGMSFolders = GMSManager.GmsPath & FileName
     If Not FileExists(FindFileInGMSFolders) Then _
         FindFileInGMSFolders = ""
 End Property
@@ -1944,6 +1944,14 @@ Public Function ReadFileAD( _
     ReadFileAD = ADODB.ReadText()
     ADODB.Close
 End Function
+
+Public Sub SetFileDateLastModified(ByVal File As String, ByVal DateTime As Date)
+    Dim Shell As Object: Set Shell = CreateObject("Shell.Application")
+    Dim FileObject As Scripting.File: Set FileObject = FSO.GetFile(File)
+    Dim Folder As Object: Set Folder = _
+        Shell.NameSpace(FileObject.ParentFolder.Path)
+    Folder.Items.Item(FileObject.Name).ModifyDate = DateTime
+End Sub
 
 'заменяет расширение файлу на заданное
 Public Function SetFileExt( _
