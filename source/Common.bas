@@ -151,6 +151,9 @@ Public Sub LayoutMain( _
     Dim Mark As Shape: Set Mark = Import(Cfg!MarksPath)
     Dim Marks As ShapeRange: Set Marks = SetMarks(Mark, Composed, MarksOffset)
     Mark.Delete
+    With ActivePage.Shapes.All
+        .SetPositionEx cdrTopMiddle, ActivePage.CenterX, .TopY
+    End With
     
     With ActiveDocument
         .MasterPage.SetSize ActivePage.SizeWidth, ActivePage.SizeHeight

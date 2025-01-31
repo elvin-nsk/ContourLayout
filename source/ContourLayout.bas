@@ -1,7 +1,7 @@
 Attribute VB_Name = "ContourLayout"
 '===============================================================================
 '   Макрос          : ContourLayout
-'   Версия          : 2025.01.30
+'   Версия          : 2025.01.31
 '   Сайты           : https://vk.com/elvin_macro
 '                     https://github.com/elvin-nsk
 '   Автор           : elvin-nsk (me@elvin.nsk.ru)
@@ -15,7 +15,7 @@ Option Explicit
 Public Const APP_NAME As String = "ContourLayout"
 Public Const APP_DISPLAYNAME As String = APP_NAME
 Public Const APP_FILEBASENAME As String = "elvin_" & APP_NAME
-Public Const APP_VERSION As String = "2025.01.30"
+Public Const APP_VERSION As String = "2025.01.31"
 
 '===============================================================================
 ' # Globals
